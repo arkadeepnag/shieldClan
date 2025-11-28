@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/block_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#D32F2F"
+    android:padding="24dp">
+
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@android:drawable/ic_delete"
+        android:contentDescription="Blocked Icon"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:id="@+id/tvShield"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="SHIELD ACTIVE"
+        android:textColor="@android:color/white"
+        android:textSize="40sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvSub"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="This app is currently blocked."
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="32dp"/>
+
+    <Button
+        android:id="@+id/btnGoHome"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Go Home"
+        android:backgroundTint="@android:color/white"
+        android:textColor="#D32F2F"
+        android:layout_marginBottom="12dp"/>
+
+    <Button
+        android:id="@+id/btnUnlock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Unlock (PIN)"
+        android:backgroundTint="@android:color/white"
+        android:textColor="#D32F2F"/>
+
+</LinearLayout>

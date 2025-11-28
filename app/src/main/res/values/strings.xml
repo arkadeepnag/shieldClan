@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Shield Clan</string>
+    <string name="service_desc">Shield Clan service detects when you open restricted apps to help you focus.</string>
+</resources>
