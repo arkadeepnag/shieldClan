@@ -1,99 +1,162 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F7F7F8"
-    android:padding="24dp">
+    android:layout_height="match_parent">
 
-    <LinearLayout
+    <ScrollView
+        android:id="@+id/mainContent"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal">
-
-        <TextView
-            android:id="@+id/titleMain"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Shield Clan"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            android:textColor="#222222"
-            android:layout_marginTop="20dp"
-            android:layout_marginBottom="28dp" />
+        android:layout_height="match_parent"
+        android:background="#F7F7F8"
+        android:padding="24dp">
 
         <LinearLayout
-            android:id="@+id/cardSelect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp"
-            android:background="@drawable/rounded_card"
-            android:elevation="6dp"
-            android:layout_marginBottom="24dp">
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:id="@+id/titleMain"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Shield Clan"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:textColor="#222222"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="28dp" />
+
+            <LinearLayout
+                android:id="@+id/cardSelect"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:background="@drawable/rounded_card"
+                android:elevation="6dp"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Select app to block"
+                    android:textSize="14sp"
+                    android:textColor="#666666"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <Spinner
+                    android:id="@+id/spinnerApps"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/spinner_bg"
+                    android:padding="12dp"
+                    android:layout_marginBottom="16dp"/>
+
+                <Button
+                    android:id="@+id/btnStart"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:text="Block This App"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#6366F1"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnSetPin"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/pin_button_bg"
+                android:text="Set Security PIN →"
+                android:textColor="#222222"
+                android:textStyle="bold"
+                android:layout_marginBottom="18dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Select app to block"
-                android:textSize="14sp"
-                android:textColor="#666666"
+                android:text="Active Blocks"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:textColor="#222222"
+                android:layout_marginBottom="12dp" />
 
-            <Spinner
-                android:id="@+id/spinnerApps"
+            <LinearLayout
+                android:id="@+id/containerBlocks"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/spinner_bg"
-                android:padding="12dp"
-                android:layout_marginBottom="16dp"/>
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
 
-            <Button
-                android:id="@+id/btnStart"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:text="Block This App"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#6366F1"
-                android:textStyle="bold"
-                android:layout_marginTop="8dp" />
         </LinearLayout>
+    </ScrollView>
 
-        <Button
-            android:id="@+id/btnSetPin"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/pin_button_bg"
-            android:text="Set Security PIN →"
-            android:textColor="#222222"
-            android:textStyle="bold"
-            android:layout_marginBottom="18dp"/>
+    <LinearLayout
+        android:id="@+id/layoutPermissions"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp"
+        android:background="#FFFFFF"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
 
-        <Button
-            android:id="@+id/btnPermissions"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/pin_button_bg"
-            android:text="Grant Permissions"
-            android:textColor="#222222"
-            android:textStyle="bold"
-            android:layout_marginBottom="18dp"/>
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@android:drawable/ic_secure"
+            android:layout_marginBottom="24dp"
+            android:backgroundTint="#6366F1"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Active Blocks"
-            android:textSize="18sp"
+            android:text="Setup Required"
+            android:textSize="28sp"
             android:textStyle="bold"
             android:textColor="#222222"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="12dp"/>
 
-        <LinearLayout
-            android:id="@+id/containerBlocks"
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:text="To block apps effectively, Shield Clan needs the following permissions."
+            android:textAlignment="center"
+            android:textSize="16sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="32dp"/>
+
+        <Button
+            android:id="@+id/btnPermOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="1. Allow Display Over Apps"
+            android:backgroundTint="#222222"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
+
+        <Button
+            android:id="@+id/btnPermAccess"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="2. Enable Accessibility Service"
+            android:backgroundTint="#222222"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="You cannot proceed without these."
+            android:textSize="12sp"
+            android:textColor="#999999"/>
 
     </LinearLayout>
-</ScrollView>
+
+</FrameLayout>
