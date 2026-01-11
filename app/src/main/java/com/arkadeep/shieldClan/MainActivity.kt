@@ -288,12 +288,24 @@ class MainActivity : Activity() {
 
         val txtName = card.findViewById<TextView>(R.id.txtBlockName)
         val txtDesc = card.findViewById<TextView>(R.id.txtBlockDesc)
+        val imgIcon = card.findViewById<ImageView>(R.id.imgAppIcon) // FIND THE IMAGE VIEW
 
         if (txtName != null) txtName.text = name
         // Fallback if ID doesn't exist in block_card_item
         else (card as? TextView)?.text = name
 
         if (txtDesc != null) txtDesc.text = "Tap to remove (requires PIN)"
+
+        // --- NEW CODE: LOAD APP ICON ---
+        try {
+            val iconDrawable = packageManager.getApplicationIcon(pkg)
+            imgIcon?.setImageDrawable(iconDrawable)
+        } catch (e: Exception) {
+            // App might be uninstalled, or error fetching icon.
+            // The default src in XML will show (or you can set a default here)
+            imgIcon?.setImageResource(android.R.drawable.sym_def_app_icon)
+        }
+        // -------------------------------
 
         card.setOnClickListener {
             val i = Intent(this, PinActivity::class.java)
