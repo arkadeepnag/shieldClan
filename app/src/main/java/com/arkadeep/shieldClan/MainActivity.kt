@@ -2,60 +2,74 @@ package com.arkadeep.shieldClan
 
 import android.animation.LayoutTransition
 import android.app.Activity
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
+import android.content.*
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.*
+import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
 
 class MainActivity : Activity() {
 
+    // Simple Data class
     data class AppInfo(val name: String, val packageName: String) {
         override fun toString(): String = name
     }
 
+    // UI Components
     private lateinit var spinnerApps: Spinner
-    private lateinit var btnBlock: Button
-    private lateinit var btnSetPin: Button
+    private lateinit var btnBlock: View // Can be Button or AppCompatButton
+    private lateinit var btnSetPin: TextView
     private lateinit var containerBlocks: LinearLayout
+    private lateinit var txtSystemStatus: TextView
+    private lateinit var imgSystemStatus: ImageView
+    private lateinit var txtFocusTitle: TextView
+    private lateinit var txtFocusDesc: TextView
+    private lateinit var layoutPermissionsContainer: ViewGroup
 
-    private lateinit var layoutPermissions: LinearLayout
-    private lateinit var btnPermOverlay: Button
-    private lateinit var btnPermAccess: Button
+    // Permission Sheet UI
+    private var permOverlayCheck: CheckBox? = null
+    private var permAccessCheck: CheckBox? = null
+    private var permOverlayCard: View? = null
+    private var permAccessCard: View? = null
+    private var btnClosePerms: Button? = null
 
     private val installedApps = mutableListOf<AppInfo>()
     private val prefsName = "BlockerPrefs"
 
-    private val PIN_ACTION_SET = "set_pin"
-    private val PIN_ACTION_VERIFY_REMOVE = "verify_and_remove"
+    // Coroutine Scope for background tasks
+    private val scope = CoroutineScope(Dispatchers.Main + Job())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        CloudManager.initListener(this)
-
+        // Bind Views
         spinnerApps = findViewById(R.id.spinnerApps)
         btnBlock = findViewById(R.id.btnStart)
         btnSetPin = findViewById(R.id.btnSetPin)
         containerBlocks = findViewById(R.id.containerBlocks)
+        txtSystemStatus = findViewById(R.id.txtSystemStatus)
+        imgSystemStatus = findViewById(R.id.imgSystemStatus)
+        txtFocusTitle = findViewById(R.id.txtFocusTitle)
+        txtFocusDesc = findViewById(R.id.txtFocusDesc)
+        layoutPermissionsContainer = findViewById(R.id.layoutPermissions)
 
-        layoutPermissions = findViewById(R.id.layoutPermissions)
-        btnPermOverlay = findViewById(R.id.btnPermOverlay)
-        btnPermAccess = findViewById(R.id.btnPermAccess)
-
+        // Enable animations for adding/removing blocks
         containerBlocks.layoutTransition = LayoutTransition()
 
+        // Inflate the permission sheet into the empty FrameLayout
+        setupPermissionSheet()
+
+        // Load apps in background to prevent UI freeze
         loadInstalledApps()
-        spinnerApps.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, installedApps)
 
         setupListeners()
         renderAllBlocks()
@@ -63,98 +77,170 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        // Critical: Check permissions and update UI every time user returns to app
+        checkPermissionsAndRefreshUI()
+    }
 
-        renderAllBlocks()
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
 
-        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-        if (prefs.contains("pin_hash")) {
-            btnSetPin.text = "Change Security PIN"
-        } else {
-            btnSetPin.text = "Set Security PIN"
+    // --- SETUP & LOGIC ---
+
+    private fun setupPermissionSheet() {
+        // Inflate the separate layout into the container
+        val sheet = LayoutInflater.from(this)
+            .inflate(R.layout.layout_permission_sheet, layoutPermissionsContainer, true)
+
+        // Bind Sheet Views
+        permOverlayCheck = sheet.findViewById(R.id.checkOverlay)
+        permAccessCheck = sheet.findViewById(R.id.checkAccess)
+        permOverlayCard = sheet.findViewById(R.id.cardPermOverlay)
+        permAccessCard = sheet.findViewById(R.id.cardPermAccess)
+        btnClosePerms = sheet.findViewById(R.id.btnClosePerms)
+
+        // Listeners for Permission Cards
+        permOverlayCard?.setOnClickListener {
+            if (!Settings.canDrawOverlays(this)) {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+                startActivity(intent)
+            }
         }
 
-        checkAndEnforcePermissions()
+        permAccessCard?.setOnClickListener {
+            if (!isAccessibilityEnabled()) {
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                startActivity(intent)
+                Toast.makeText(this, "Find Shield Clan and turn it ON", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        btnClosePerms?.setOnClickListener {
+            layoutPermissionsContainer.visibility = View.GONE
+        }
+    }
+
+    private fun checkPermissionsAndRefreshUI() {
+        val hasOverlay = Settings.canDrawOverlays(this)
+        val hasAccess = isAccessibilityEnabled()
+        val allGranted = hasOverlay && hasAccess
+
+        // Update Permission Sheet UI
+        permOverlayCheck?.isChecked = hasOverlay
+        permAccessCheck?.isChecked = hasAccess
+        permOverlayCard?.alpha = if (hasOverlay) 0.5f else 1.0f
+        permAccessCard?.alpha = if (hasAccess) 0.5f else 1.0f
+
+        // Show/Hide Permission Sheet
+        if (allGranted) {
+            layoutPermissionsContainer.visibility = View.GONE
+        } else {
+            layoutPermissionsContainer.visibility = View.VISIBLE
+            btnClosePerms?.visibility = if (allGranted) View.VISIBLE else View.GONE
+        }
+
+        updateFocusUI(allGranted)
     }
 
     private fun setupListeners() {
         btnSetPin.setOnClickListener {
+            // Updated logic: Just open PinActivity.
+            // The PinActivity logic (which we fixed) will handle "Set New" vs "Manage" automatically.
             val i = Intent(this, PinActivity::class.java)
-            i.putExtra("action", PIN_ACTION_SET)
+            i.putExtra("action", "set_pin")
             startActivity(i)
         }
 
         btnBlock.setOnClickListener {
-            val selected = spinnerApps.selectedItem as? AppInfo
-            if (selected == null) {
-                Toast.makeText(this, "Pick an app first", Toast.LENGTH_SHORT).show()
+            // Check if permissions are granted before blocking
+            if (layoutPermissionsContainer.visibility == View.VISIBLE) {
+                Toast.makeText(this, "Grant permissions first!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-            val salt = prefs.getString("pin_salt", null)
-            val hash = prefs.getString("pin_hash", null)
+            val app = spinnerApps.selectedItem as? AppInfo
+            if (app == null) return@setOnClickListener
 
-            if (salt == null || hash == null) {
-                Toast.makeText(this, "⚠️ Set a Security PIN first!", Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
-
-            addInfiniteBlock(selected.packageName, selected.name)
-            addCardAnimated(selected.packageName, selected.name)
-            Toast.makeText(this, "Blocked ${selected.name}", Toast.LENGTH_SHORT).show()
-        }
-
-        btnPermOverlay.setOnClickListener {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-            startActivity(intent)
-        }
-
-        btnPermAccess.setOnClickListener {
-            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            startActivity(intent)
-            Toast.makeText(this, "Find 'Shield Clan' & Turn ON", Toast.LENGTH_LONG).show()
+            addBlock(app.packageName, app.name)
+            addCardAnimated(app.packageName, app.name)
+            updateFocusUI(true)
         }
     }
 
-    private fun checkAndEnforcePermissions() {
-        val hasOverlay = Settings.canDrawOverlays(this)
-        val hasAccess = isAccessibilityEnabled()
+    private fun updateFocusUI(permissionsGranted: Boolean) {
+        val count = getBlocks().length()
+        val systemActive = permissionsGranted && count > 0
 
-        if (hasOverlay && hasAccess) {
-            layoutPermissions.visibility = View.GONE
+        if (systemActive) {
+            // Active State
+            txtSystemStatus.text = "SYSTEM ACTIVE"
+            imgSystemStatus.setImageResource(android.R.drawable.presence_online)
+            txtFocusTitle.text = "You are focused."
+            txtFocusDesc.text = "$count app${if (count > 1) "s are" else " is"} currently restricted."
         } else {
-            layoutPermissions.visibility = View.VISIBLE
+            // Idle State
+            txtSystemStatus.text = "SYSTEM IDLE"
+            imgSystemStatus.setImageResource(android.R.drawable.presence_invisible) // or any gray dot
 
-            if (hasOverlay) {
-                btnPermOverlay.visibility = View.GONE
+            if (!permissionsGranted) {
+                txtFocusTitle.text = "Permissions Needed"
+                txtFocusDesc.text = "System cannot block apps without access."
             } else {
-                btnPermOverlay.visibility = View.VISIBLE
-                btnPermOverlay.text = "1. Allow Display Over Apps"
-            }
-
-            if (hasAccess) {
-                btnPermAccess.visibility = View.GONE
-            } else {
-                btnPermAccess.visibility = View.VISIBLE
-                btnPermAccess.text = if (hasOverlay) "Enable Accessibility Service" else "2. Enable Accessibility Service"
+                txtFocusTitle.text = "Shield Inactive"
+                txtFocusDesc.text = "Add an app above to start blocking."
             }
         }
     }
+
+    // --- DATA HANDLING ---
+
+    private fun loadInstalledApps() {
+        scope.launch(Dispatchers.IO) {
+            val intent = Intent(Intent.ACTION_MAIN, null)
+            intent.addCategory(Intent.CATEGORY_LAUNCHER)
+
+            // Query all apps
+            val apps = packageManager.queryIntentActivities(intent, 0)
+
+            val tempApps = mutableListOf<AppInfo>()
+            for (ri in apps) {
+                val pkg = ri.activityInfo.packageName
+                // Don't list ourselves
+                if (pkg != packageName) {
+                    val name = ri.loadLabel(packageManager).toString()
+                    tempApps.add(AppInfo(name, pkg))
+                }
+            }
+            tempApps.sortBy { it.name }
+
+            // Update UI on Main Thread
+            withContext(Dispatchers.Main) {
+                installedApps.clear()
+                installedApps.addAll(tempApps)
+                spinnerApps.adapter = ArrayAdapter(
+                    this@MainActivity,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    installedApps
+                )
+            }
+        }
+    }
+
+    // --- HELPER FUNCTIONS ---
 
     private fun isAccessibilityEnabled(): Boolean {
-        val expectedComponentName = ComponentName(this, BlockService::class.java)
-        val enabledServicesSetting = Settings.Secure.getString(
+        val expected = ComponentName(this, BlockService::class.java)
+        val enabled = Settings.Secure.getString(
             contentResolver,
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false
 
-        val colonSplitter = TextUtils.SimpleStringSplitter(':')
-        colonSplitter.setString(enabledServicesSetting)
-
-        while (colonSplitter.hasNext()) {
-            val componentNameString = colonSplitter.next()
-            val enabledComponent = ComponentName.unflattenFromString(componentNameString)
-            if (enabledComponent != null && enabledComponent == expectedComponentName)
+        val splitter = TextUtils.SimpleStringSplitter(':')
+        splitter.setString(enabled)
+        while (splitter.hasNext()) {
+            val componentName = ComponentName.unflattenFromString(splitter.next())
+            if (componentName != null && componentName == expected)
                 return true
         }
         return false
@@ -168,19 +254,22 @@ class MainActivity : Activity() {
     private fun saveBlocks(arr: JSONArray) {
         getSharedPreferences(prefsName, Context.MODE_PRIVATE)
             .edit().putString("blocks_json", arr.toString()).apply()
-        val intent = Intent("com.arkadeep.shieldClan.UPDATE_BLOCKS")
-        sendBroadcast(intent)
+
+        // CRITICAL FIX: Notify BlockService to refresh its cache immediately
+        sendBroadcast(Intent("com.arkadeep.shieldClan.UPDATE_BLOCKS"))
     }
 
-    private fun addInfiniteBlock(pkg: String, name: String) {
+    private fun addBlock(pkg: String, name: String) {
         val arr = getBlocks()
+        // Prevent duplicates
         for (i in 0 until arr.length()) {
             if (arr.getJSONObject(i).optString("package") == pkg) return
         }
-        val o = JSONObject()
-        o.put("package", pkg)
-        o.put("name", name)
-        arr.put(o)
+
+        arr.put(JSONObject().apply {
+            put("package", pkg)
+            put("name", name)
+        })
         saveBlocks(arr)
     }
 
@@ -189,57 +278,43 @@ class MainActivity : Activity() {
         val arr = getBlocks()
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
-            addCardAnimated(o.optString("package"), o.optString("name"), false)
+            addCardAnimated(o.getString("package"), o.getString("name"), false)
         }
     }
 
     private fun addCardAnimated(pkg: String, name: String, animate: Boolean = true) {
-        val inflater = LayoutInflater.from(this)
-        val card = inflater.inflate(R.layout.block_card_item, containerBlocks, false)
-        val title = card.findViewById<TextView>(R.id.txtBlockName)
-        val subtitle = card.findViewById<TextView>(R.id.txtBlockDesc)
+        val card = LayoutInflater.from(this)
+            .inflate(R.layout.block_card_item, containerBlocks, false)
 
-        title.text = name
-        subtitle.text = "Tap to remove (requires PIN)"
+        val txtName = card.findViewById<TextView>(R.id.txtBlockName)
+        val txtDesc = card.findViewById<TextView>(R.id.txtBlockDesc)
+
+        if (txtName != null) txtName.text = name
+        // Fallback if ID doesn't exist in block_card_item
+        else (card as? TextView)?.text = name
+
+        if (txtDesc != null) txtDesc.text = "Tap to remove (requires PIN)"
 
         card.setOnClickListener {
             val i = Intent(this, PinActivity::class.java)
-            i.putExtra("action", PIN_ACTION_VERIFY_REMOVE)
             i.putExtra("blocked_package", pkg)
+            // We set action to "verify_and_remove" to trigger the unlock flow
+            i.putExtra("action", "verify_and_remove")
             startActivity(i)
         }
 
-        if (animate) {
-            card.alpha = 0f
-            card.translationY = 30f
-        }
+        // Add to top of list
         containerBlocks.addView(card, 0)
 
         if (animate) {
+            card.alpha = 0f
+            card.translationY = 50f
             card.animate()
                 .alpha(1f)
                 .translationY(0f)
+                .setDuration(400)
                 .setInterpolator(AccelerateDecelerateInterpolator())
-                .setDuration(350)
                 .start()
-        } else {
-            card.alpha = 1f
-            card.translationY = 0f
         }
-    }
-
-    private fun loadInstalledApps() {
-        val intent = Intent(Intent.ACTION_MAIN, null)
-        intent.addCategory(Intent.CATEGORY_LAUNCHER)
-        val apps = packageManager.queryIntentActivities(intent, 0)
-        installedApps.clear()
-        for (ri in apps) {
-            val label = ri.loadLabel(packageManager).toString()
-            val pkg = ri.activityInfo.packageName
-            if (pkg != packageName) {
-                installedApps.add(AppInfo(label, pkg))
-            }
-        }
-        installedApps.sortBy { it.name }
     }
 }

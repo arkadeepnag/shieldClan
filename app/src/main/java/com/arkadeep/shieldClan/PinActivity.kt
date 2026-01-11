@@ -2,189 +2,182 @@ package com.arkadeep.shieldClan
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import org.json.JSONArray
 import java.security.MessageDigest
-import java.util.*
+import java.util.UUID
 
 class PinActivity : Activity() {
 
-    private val prefsName = "BlockerPrefs"
-    private val PIN_HASH = "pin_hash"
-    private val PIN_SALT = "pin_salt"
-    private val ATTEMPTS_KEY = "pin_attempts"
-    private val LOCKOUT_KEY = "pin_lockout_until"
-
-    private val MAX_ATTEMPTS = 3
-    private val LOCKOUT_MS = 5 * 60 * 1000L // 5 minutes
-
+    private val PREFS_NAME = "BlockerPrefs"
     private lateinit var etPin: EditText
-    private lateinit var btnAction: Button
-    private lateinit var tvTitle: TextView // Suggest adding a Title TextView in XML if possible, or use Toast
+    private lateinit var btnVerify: Button
+    private lateinit var btnSave: Button
+    private lateinit var tvTitle: TextView
+    private lateinit var tvSub: TextView
 
-    // State management for the PIN process
-    private enum class PinStep {
-        VERIFY_TO_UNLOCK, // Unlocking an app
-        VERIFY_TO_CHANGE, // Verifying old pin before changing
-        SET_NEW           // Setting a fresh pin
-    }
-
-    private var currentStep = PinStep.SET_NEW
-    private var blockedPackage: String? = null
+    // State definitions
+    private enum class Mode { VERIFY_UNLOCK, SET_NEW, VERIFY_OLD_TO_CHANGE }
+    private var currentMode = Mode.SET_NEW
+    private var targetPackage: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pin)
 
         etPin = findViewById(R.id.etPin)
-        val btnSave = findViewById<Button>(R.id.btnSavePin)
-        val btnVerify = findViewById<Button>(R.id.btnVerifyPin)
+        btnVerify = findViewById(R.id.btnVerifyPin)
+        btnSave = findViewById(R.id.btnSavePin)
 
-        // Combine buttons for cleaner logic (Use one button, change text)
-        btnAction = if (btnSave.visibility == Button.VISIBLE) btnSave else btnVerify
-        // Ensure one button is always visible for this logic, or just use btnVerify in XML and rename it to btnAction
-        btnSave.visibility = Button.GONE
-        btnVerify.visibility = Button.VISIBLE
-        btnAction = btnVerify
+        // Safety fallback if IDs are missing in XML
+        tvTitle = findViewById(R.id.tvShield) ?: TextView(this)
+        tvSub = findViewById(R.id.tvSub) ?: TextView(this)
 
+        // "action" can be "set_pin" or "verify_and_remove"
         val action = intent.getStringExtra("action")
-        blockedPackage = intent.getStringExtra("blocked_package")
+        targetPackage = intent.getStringExtra("blocked_package")
 
-        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-        val hasPin = prefs.contains(PIN_HASH)
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val hasPin = prefs.contains("pin_hash")
 
-        // --- DETERMINE STATE ---
-        if (action == "set_pin") {
+        // --- FIXED LOGIC START ---
+
+        // CASE 1: User is trying to UNLOCK a blocked app
+        if (targetPackage != null) {
             if (hasPin) {
-                currentStep = PinStep.VERIFY_TO_CHANGE
-                btnAction.text = "Verify Old PIN"
-                Toast.makeText(this, "Enter OLD PIN to continue", Toast.LENGTH_SHORT).show()
+                currentMode = Mode.VERIFY_UNLOCK
+                setupUI(verify = true, "Verify to Unlock")
             } else {
-                currentStep = PinStep.SET_NEW
-                btnAction.text = "Set New PIN"
+                // If no PIN is set but app is blocked, safe fallback to unlock
+                Toast.makeText(this, "No PIN set. Unlocking...", Toast.LENGTH_SHORT).show()
+                unlockAndFinish()
             }
-        } else {
-            // "verify_and_remove" or any unlock attempt
-            currentStep = PinStep.VERIFY_TO_UNLOCK
-            btnAction.text = "Unlock"
         }
+        // CASE 2: User is in the Main Menu clicking "Manage PIN"
+        else {
+            if (hasPin) {
+                // If they have a PIN, they must verify it before changing it
+                currentMode = Mode.VERIFY_OLD_TO_CHANGE
+                setupUI(verify = true, "Verify Old PIN")
+            } else {
+                // If no PIN exists, let them set a new one immediately
+                currentMode = Mode.SET_NEW
+                setupUI(verify = false, "Set New PIN")
+            }
+        }
+        // --- FIXED LOGIC END ---
+    }
 
-        btnAction.setOnClickListener {
-            handlePinAction()
+    private fun setupUI(verify: Boolean, btnText: String) {
+        etPin.text.clear()
+        if (verify) {
+            btnVerify.visibility = View.VISIBLE
+            btnSave.visibility = View.GONE
+            btnVerify.text = btnText
+
+            btnVerify.setOnClickListener { validatePin() }
+        } else {
+            btnVerify.visibility = View.GONE
+            btnSave.visibility = View.VISIBLE
+            btnSave.text = btnText
+
+            btnSave.setOnClickListener { saveNewPin() }
         }
     }
 
-    private fun handlePinAction() {
-        val inputPin = etPin.text.toString().trim()
-        if (inputPin.length != 6) {
+    private fun validatePin() {
+        val input = etPin.text.toString()
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        val storedHash = prefs.getString("pin_hash", "")
+        val storedSalt = prefs.getString("pin_salt", "")
+
+        if (storedHash.isNullOrEmpty() || storedSalt.isNullOrEmpty()) {
+            // Fallback if data corrupted
+            unlockAndFinish()
+            return
+        }
+
+        if (hashPin(input, storedSalt) == storedHash) {
+            // SUCCESS: PIN MATCHED
+            when (currentMode) {
+                Mode.VERIFY_OLD_TO_CHANGE -> {
+                    // Transition to Set New Mode
+                    currentMode = Mode.SET_NEW
+                    setupUI(verify = false, "Save NEW PIN")
+                    Toast.makeText(this, "Old PIN Verified. Enter new one.", Toast.LENGTH_LONG).show()
+                }
+                Mode.VERIFY_UNLOCK -> {
+                    unlockAndFinish()
+                }
+                else -> {}
+            }
+        } else {
+            // ERROR: WRONG PIN
+            etPin.error = "Incorrect PIN"
+            // Simple shake animation
+            etPin.animate().translationX(20f).setDuration(100).withEndAction {
+                etPin.animate().translationX(-20f).setDuration(100)
+            }.start()
+        }
+    }
+
+    private fun saveNewPin() {
+        val input = etPin.text.toString()
+        if (input.length != 6) {
             Toast.makeText(this, "PIN must be 6 digits", Toast.LENGTH_SHORT).show()
             return
         }
 
-        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-
-        // CHECK LOCKOUT
-        val now = System.currentTimeMillis()
-        val lockoutUntil = prefs.getLong(LOCKOUT_KEY, 0L)
-        if (now < lockoutUntil) {
-            val remainS = (lockoutUntil - now) / 1000
-            Toast.makeText(this, "Locked. Wait ${remainS}s", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        when (currentStep) {
-            PinStep.SET_NEW -> {
-                saveNewPin(inputPin, prefs)
-            }
-            PinStep.VERIFY_TO_UNLOCK, PinStep.VERIFY_TO_CHANGE -> {
-                verifyPin(inputPin, prefs)
-            }
-        }
-    }
-
-    private fun verifyPin(inputPin: String, prefs: android.content.SharedPreferences) {
-        val storedHash = prefs.getString(PIN_HASH, "")
-        val storedSalt = prefs.getString(PIN_SALT, "")
-
-        if (storedHash.isNullOrEmpty() || storedSalt.isNullOrEmpty()) {
-            // Should not happen in verify mode, but if it does, switch to set
-            currentStep = PinStep.SET_NEW
-            btnAction.text = "Set New PIN"
-            return
-        }
-
-        val inputHash = hashPin(inputPin, storedSalt)
-
-        if (inputHash == storedHash) {
-            // SUCCESS
-            prefs.edit().putInt(ATTEMPTS_KEY, 0).remove(LOCKOUT_KEY).apply()
-
-            if (currentStep == PinStep.VERIFY_TO_CHANGE) {
-                // Phase 1 Complete: Old PIN verified. Now allow setting new.
-                currentStep = PinStep.SET_NEW
-                etPin.text.clear()
-                btnAction.text = "Save New PIN"
-                Toast.makeText(this, "Identity Verified. Enter NEW PIN.", Toast.LENGTH_SHORT).show()
-            } else {
-                // Unlock Action
-                if (blockedPackage != null) {
-                    removeBlock(blockedPackage!!)
-                    finish() // Close screen
-                } else {
-                    Toast.makeText(this, "Verified", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-            }
-        } else {
-            // FAILURE
-            handleFailedAttempt(prefs)
-        }
-    }
-
-    private fun saveNewPin(pin: String, prefs: android.content.SharedPreferences) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val newSalt = UUID.randomUUID().toString()
-        val newHash = hashPin(pin, newSalt)
+        val newHash = hashPin(input, newSalt)
 
         prefs.edit()
-            .putString(PIN_SALT, newSalt)
-            .putString(PIN_HASH, newHash)
-            .putInt(ATTEMPTS_KEY, 0)
-            .remove(LOCKOUT_KEY)
+            .putString("pin_hash", newHash)
+            .putString("pin_salt", newSalt)
             .apply()
 
-        Toast.makeText(this, "PIN Updated Successfully", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "PIN Secured", Toast.LENGTH_SHORT).show()
         finish()
     }
 
-    private fun handleFailedAttempt(prefs: android.content.SharedPreferences) {
-        var attempts = prefs.getInt(ATTEMPTS_KEY, 0)
-        attempts++
-        val edit = prefs.edit().putInt(ATTEMPTS_KEY, attempts)
+    private fun unlockAndFinish() {
+        if (targetPackage != null) {
+            removeBlock(targetPackage!!)
 
-        if (attempts >= MAX_ATTEMPTS) {
-            val lockUntil = System.currentTimeMillis() + LOCKOUT_MS
-            edit.putLong(LOCKOUT_KEY, lockUntil)
-            Toast.makeText(this, "Too many attempts. Locked for 5 mins.", Toast.LENGTH_LONG).show()
-        } else {
-            val left = MAX_ATTEMPTS - attempts
-            Toast.makeText(this, "Wrong PIN. Attempts left: $left", Toast.LENGTH_SHORT).show()
+            // Go Home to close the blocked app overlay
+            val home = Intent(Intent.ACTION_MAIN)
+            home.addCategory(Intent.CATEGORY_HOME)
+            home.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(home)
         }
-        edit.apply()
-        etPin.text.clear()
+        finish()
     }
 
     private fun removeBlock(pkg: String) {
-        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-        val arr = org.json.JSONArray(prefs.getString("blocks_json", "[]"))
-        val out = org.json.JSONArray()
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jsonStr = prefs.getString("blocks_json", "[]")
+        val arr = JSONArray(jsonStr)
+        val newArr = JSONArray()
+
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
-            if (o.optString("package") != pkg) out.put(o)
+            if (o.getString("package") != pkg) {
+                newArr.put(o)
+            }
         }
-        prefs.edit().putString("blocks_json", out.toString()).apply()
+
+        prefs.edit().putString("blocks_json", newArr.toString()).apply()
+
+        // IMPORTANT: Notify Service to update cache immediately
+        sendBroadcast(Intent("com.arkadeep.shieldClan.UPDATE_BLOCKS"))
     }
 
     private fun hashPin(pin: String, salt: String): String {

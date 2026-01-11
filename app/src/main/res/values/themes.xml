@@ -1,12 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.ShieldClan" parent="android:Theme.Material.Light.NoActionBar">
-        <!-- Customize your theme here. -->
-        <item name="android:statusBarColor">@color/purple_500</item>
+
+    <!-- ===============================
+         MAIN APPLICATION THEME
+         =============================== -->
+    <style name="Theme.ShieldClan"
+        parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+        <!-- Brand colors -->
+        <item name="colorPrimary">@color/brand_accent</item>
+        <item name="colorPrimaryVariant">@color/brand_accent</item>
+        <item name="colorSecondary">@color/brand_accent</item>
+
+        <!-- Window / system UI -->
+        <item name="android:statusBarColor">@color/bg_app</item>
+        <item name="android:navigationBarColor">@color/bg_app</item>
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- Disable action bar -->
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+
+        <!-- Material surfaces -->
+        <item name="colorSurface">@color/surface_card</item>
+        <item name="colorOnSurface">@color/text_header</item>
+
     </style>
 
-    <!-- Fullscreen theme for the Block Activity -->
-    <style name="Theme.ShieldClan.Fullscreen" parent="android:Theme.Material.Light.NoActionBar.Fullscreen">
+
+    <!-- ===============================
+         FULLSCREEN THEME (BlockActivity)
+         =============================== -->
+    <style name="Theme.ShieldClan.Fullscreen"
+        parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
         <item name="android:windowFullscreen">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+
     </style>
+
 </resources>

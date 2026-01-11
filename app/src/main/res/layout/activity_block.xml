@@ -1,54 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/block_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
     android:background="#D32F2F"
-    android:padding="24dp">
+    android:padding="32dp">
 
-    <ImageView
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:src="@android:drawable/ic_delete"
-        android:contentDescription="Blocked Icon"
-        android:layout_marginBottom="16dp"/>
+    <FrameLayout
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:background="@drawable/bg_soft_input"
+        android:backgroundTint="#20FFFFFF"
+        android:layout_marginBottom="24dp">
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:src="@android:drawable/ic_lock_idle_lock"
+            app:tint="@android:color/white"/>
+    </FrameLayout>
 
     <TextView
         android:id="@+id/tvShield"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="SHIELD ACTIVE"
+        android:fontFamily="sans-serif-black"
         android:textColor="@android:color/white"
-        android:textSize="40sp"
-        android:textStyle="bold" />
+        android:textSize="32sp"
+        android:letterSpacing="0.05"
+        android:gravity="center"
+        android:layout_marginBottom="8dp"/>
 
     <TextView
         android:id="@+id/tvSub"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="This app is currently blocked."
+        android:text="This application is currently restricted\nby your focus settings."
         android:textColor="@android:color/white"
-        android:textSize="18sp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="32dp"/>
+        android:textSize="16sp"
+        android:gravity="center"
+        android:alpha="0.8"
+        android:lineSpacingMultiplier="1.2"
+        android:layout_marginBottom="48dp"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnGoHome"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Go Home"
-        android:backgroundTint="@android:color/white"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:text="Retreat to Home"
         android:textColor="#D32F2F"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        app:cornerRadius="12dp"
+        android:elevation="0dp"
+        android:stateListAnimator="@null"
+        app:backgroundTint="@android:color/white"
         android:layout_marginBottom="12dp"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnUnlock"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Unlock (PIN)"
-        android:backgroundTint="@android:color/white"
-        android:textColor="#D32F2F"/>
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:text="Emergency Unlock"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        app:cornerRadius="12dp"
+        app:strokeColor="#50FFFFFF"
+        app:strokeWidth="1dp"
+        android:elevation="0dp"
+        android:stateListAnimator="@null"
+        app:backgroundTint="@android:color/transparent"/>
 
 </LinearLayout>
