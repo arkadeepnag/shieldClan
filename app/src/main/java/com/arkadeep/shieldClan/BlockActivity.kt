@@ -1,32 +1,41 @@
 package com.arkadeep.shieldClan
 
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 
 class BlockActivity : Activity() {
 
-    private lateinit var tvShield: TextView
-    private lateinit var tvSub: TextView
-    private lateinit var btnGoHome: Button
-    private lateinit var btnUnlock: Button
-
-    private var blockedPackage: String = ""
-    private var blockedName: String = ""
+    private val closeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            // Received signal that PIN was correct or Grace Period granted
+            finish()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_block)
 
-        tvShield = findViewById(R.id.tvShield)
-        tvSub = findViewById(R.id.tvSub)
-        btnGoHome = findViewById(R.id.btnGoHome)
-        btnUnlock = findViewById(R.id.btnUnlock)
+        // Register receiver to close this screen remotely
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Context.RECEIVER_EXPORTED else 0
+        registerReceiver(closeReceiver, IntentFilter("com.arkadeep.shieldClan.CLOSE_BLOCK_SCREEN"), flags)
 
-        blockedPackage = intent.getStringExtra("blocked_package") ?: ""
-        blockedName = intent.getStringExtra("blocked_name") ?: blockedPackage
+        val tvShield: TextView = findViewById(R.id.tvShield)
+        val tvSub: TextView = findViewById(R.id.tvSub)
+        val btnGoHome: Button = findViewById(R.id.btnGoHome)
+        val btnUnlock: Button = findViewById(R.id.btnUnlock)
+        // val imgIcon: ImageView = findViewById(R.id.imgIcon) // If you added this
+
+        val blockedPackage = intent.getStringExtra("blocked_package") ?: ""
+        val blockedName = intent.getStringExtra("blocked_name") ?: blockedPackage
 
         tvShield.text = "SHIELD ACTIVE"
         tvSub.text = "$blockedName is blocked."
@@ -40,11 +49,19 @@ class BlockActivity : Activity() {
 
         btnUnlock.setOnClickListener {
             val i = Intent(this, PinActivity::class.java)
-            i.putExtra("action", "verify_and_remove")
             i.putExtra("blocked_package", blockedPackage)
             startActivity(i)
         }
     }
 
-    override fun onBackPressed() {  }
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            unregisterReceiver(closeReceiver)
+        } catch (e: Exception) {}
+    }
+
+    override fun onBackPressed() {
+        // Prevent back button
+    }
 }

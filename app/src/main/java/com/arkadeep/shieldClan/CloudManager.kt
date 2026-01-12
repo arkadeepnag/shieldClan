@@ -1,6 +1,7 @@
 package com.arkadeep.shieldClan
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -37,31 +38,42 @@ object CloudManager {
 
         dbRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                if (!snapshot.exists()) return
-
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 val editor = prefs.edit()
                 var changesMade = false
 
-                val rawPin = snapshot.child("new_pin").value
-                val remotePin = rawPin?.toString()
-
-                if (!remotePin.isNullOrEmpty()) {
-                    Log.d(TAG, "Received new PIN from cloud: $remotePin")
-
+                // 1. PIN CHANGE LOGIC
+                if (snapshot.hasChild("new_pin")) {
+                    val remotePin = snapshot.child("new_pin").value.toString()
                     val salt = prefs.getString("pin_salt", UUID.randomUUID().toString()) ?: UUID.randomUUID().toString()
                     val hashed = hashPin(remotePin, salt)
 
                     editor.putString("pin_salt", salt)
                     editor.putString("pin_hash", hashed)
-                    editor.putInt("pin_attempts", 0)
                     editor.remove("pin_lockout_until")
 
-
+                    // Remove the command from cloud so it doesn't loop
                     snapshot.child("new_pin").ref.removeValue()
                     changesMade = true
                 }
 
+                // 2. REMOTE BLOCK LIST UPDATE (NEW FEATURE)
+                if (snapshot.hasChild("remote_blocks")) {
+                    // Expecting a JSON String: [{"package":"com.facebook.katana", "name":"Facebook"}]
+                    val blockJson = snapshot.child("remote_blocks").value.toString()
+
+                    editor.putString("blocks_json", blockJson)
+                    changesMade = true
+
+                    // Notify the Service to update immediately
+                    val intent = Intent("com.arkadeep.shieldClan.UPDATE_BLOCKS")
+                    context.sendBroadcast(intent)
+
+                    // Remove command to allow local changes later
+                    snapshot.child("remote_blocks").ref.removeValue()
+                }
+
+                // 3. EMERGENCY UNLOCK LOGIC
                 val rawStatus = snapshot.child("status").value
                 val lockStatus = rawStatus?.toString()
 
@@ -70,7 +82,7 @@ object CloudManager {
                     snapshot.child("status").ref.setValue("IDLE")
                     changesMade = true
 
-                    val intent = android.content.Intent("com.arkadeep.shieldClan.UPDATE_BLOCKS")
+                    val intent = Intent("com.arkadeep.shieldClan.UPDATE_BLOCKS")
                     context.sendBroadcast(intent)
                 }
 

@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -17,43 +18,59 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.ShieldClan">
-
         <activity
-            android:name="com.arkadeep.shieldClan.MainActivity"
-            android:exported="true">
+            android:name=".MainActivity"
+            android:exported="false" />
+
+        <activity-alias
+            android:name=".MainActivityAlias"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+
 
         <activity
             android:name="com.arkadeep.shieldClan.BlockActivity"
             android:theme="@style/Theme.ShieldClan.Fullscreen"
             android:launchMode="singleInstance"
-            android:taskAffinity=""
             android:excludeFromRecents="true"
             android:exported="false" />
 
-        <activity
-            android:name="com.arkadeep.shieldClan.PinActivity"
-            android:exported="true" />
+        <activity android:name="com.arkadeep.shieldClan.PinActivity" />
 
         <service
             android:name="com.arkadeep.shieldClan.BlockService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
-
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/service_config" />
         </service>
-
+        <receiver
+            android:name=".ShieldDeviceAdmin"
+            android:description="@string/app_name"
+            android:label="Shield Security"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
