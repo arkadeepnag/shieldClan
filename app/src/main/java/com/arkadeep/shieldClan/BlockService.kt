@@ -211,12 +211,21 @@ class BlockService : AccessibilityService() {
     }
 
     private fun checkAndBlock(pkg: String) {
-        if (pkg == packageName || pkg == "com.arkadeep.shieldClan") return // Never block self
-        if (pkg == "com.android.systemui") return
+        // Don't block ourselves or System UI
+        if (pkg == packageName || pkg == "com.android.systemui") return
 
         if (isTemporarilyUnlocked(pkg)) return
 
         if (blockedCache.containsKey(pkg)) {
+            // 1. KILL THE APP (Fixes PiP Glitch)
+            try {
+                val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                am.killBackgroundProcesses(pkg)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // 2. SHOW BLOCK SCREEN
             val intent = Intent(this, BlockActivity::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             intent.putExtra("blocked_package", pkg)
@@ -224,7 +233,6 @@ class BlockService : AccessibilityService() {
             startActivity(intent)
         }
     }
-
     private fun isTemporarilyUnlocked(pkg: String): Boolean {
         val prefs = getSharedPreferences(prefsName, MODE_PRIVATE)
         val expiryTime = prefs.getLong("temp_unlock_$pkg", 0L)
