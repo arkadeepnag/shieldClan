@@ -1,90 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
     android:background="@color/bg_app"
-    android:padding="32dp">
+    android:padding="24dp">
 
-    <ImageView
-        android:layout_width="64dp"
-        android:layout_height="64dp"
-        android:src="@android:drawable/ic_lock_lock"
-        app:tint="@color/text_header"
-        android:layout_marginBottom="24dp"
-        android:alpha="0.8"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Shield Security"
-        android:fontFamily="sans-serif-black"
-        android:textSize="26sp"
-        android:textColor="@color/text_header"
-        android:letterSpacing="-0.02"
-        android:layout_marginBottom="8dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Enter 6-digit access code"
-        android:textColor="@color/text_body"
-        android:textSize="15sp"
-        android:layout_marginBottom="48dp"/>
-
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
+        android:id="@+id/contentContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="0dp"
-        app:cardBackgroundColor="@color/surface_card"
-        android:layout_marginBottom="32dp">
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintVertical_bias="0.4">
 
-        <EditText
-            android:id="@+id/etPin"
-            android:layout_width="match_parent"
+        <ImageView
+            android:layout_width="72dp"
             android:layout_height="72dp"
-            android:background="@android:color/transparent"
-            android:hint="••••••"
-            android:inputType="numberPassword"
-            android:maxLength="6"
-            android:gravity="center"
-            android:textSize="32sp"
-            android:letterSpacing="0.4"
+            android:src="@android:drawable/ic_lock_idle_lock"
+            app:tint="@color/text_header"
+            android:layout_marginBottom="24dp"
+            android:alpha="0.9"/>
+
+        <TextView
+            android:id="@+id/tvShield"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Shield Security"
             android:fontFamily="sans-serif-black"
+            android:textSize="28sp"
             android:textColor="@color/text_header"
-            android:textColorHint="#20000000"/>
-    </com.google.android.material.card.MaterialCardView>
+            android:letterSpacing="-0.02"
+            android:layout_marginBottom="8dp"/>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnVerifyPin"
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:text="Verify Access"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textAllCaps="false"
-        app:cornerRadius="12dp"
-        android:elevation="0dp"
-        android:stateListAnimator="@null"
-        android:backgroundTint="@color/brand_accent"
-        android:layout_marginBottom="16dp"/>
+        <TextView
+            android:id="@+id/tvSub"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enter 6-digit access code"
+            android:textColor="@color/text_body"
+            android:textSize="16sp"
+            android:layout_marginBottom="40dp"/>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSavePin"
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:text="Set New PIN"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textAllCaps="false"
-        app:cornerRadius="12dp"
-        android:elevation="0dp"
-        android:stateListAnimator="@null"
-        android:backgroundTint="@color/surface_card"
-        android:textColor="@color/text_header"/>
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="@color/surface_card"
+            android:layout_marginBottom="32dp">
 
-</LinearLayout>
+            <EditText
+                android:id="@+id/etPin"
+                android:layout_width="match_parent"
+                android:layout_height="72dp"
+                android:background="@android:color/transparent"
+                android:hint="••••••"
+                android:inputType="numberPassword"
+                android:maxLength="6"
+                android:gravity="center"
+                android:textSize="32sp"
+                android:letterSpacing="0.4"
+                android:fontFamily="sans-serif-black"
+                android:textColor="@color/text_header"
+                android:textColorHint="#20000000"/>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnVerifyPin"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:text="Verify Access"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textAllCaps="false"
+            app:cornerRadius="12dp"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            app:backgroundTint="@color/brand_accent"
+            android:textColor="#FFFFFF"
+            android:visibility="gone"
+            tools:visibility="visible"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSavePin"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:text="Set New PIN"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textAllCaps="false"
+            app:cornerRadius="12dp"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            app:backgroundTint="@color/brand_accent"
+            android:textColor="#FFFFFF"
+            android:visibility="gone"
+            tools:visibility="visible"/>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

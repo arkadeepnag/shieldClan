@@ -15,7 +15,7 @@ import android.widget.TextView
 
 class BlockActivity : Activity() {
 
-    // 1. The Scolding Quotes
+    // Scolding Quotes
     private val quotes = listOf(
         "THEY DON'T KNOW ME SON!",
         "WHO'S GONNA CARRY THE BOATS?",
@@ -37,42 +37,33 @@ class BlockActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_block)
 
-        // Register receiver to close screen remotely
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Context.RECEIVER_EXPORTED else 0
         registerReceiver(closeReceiver, IntentFilter("com.arkadeep.shieldClan.CLOSE_BLOCK_SCREEN"), flags)
 
         val tvScold: TextView = findViewById(R.id.tvScold)
         val imgGoggins: ImageView = findViewById(R.id.imgGoggins)
         val btnGoHome: Button = findViewById(R.id.btnGoHome)
-        val btnUnlock: View = findViewById(R.id.btnUnlock) // Treated as View since it might be TextView or Button
+        val btnUnlock: View = findViewById(R.id.btnUnlock)
 
         val blockedPackage = intent.getStringExtra("blocked_package") ?: ""
 
-        // 2. Set Random Quote
+        // Set Random Quote
         tvScold.text = quotes.random()
 
-        // 3. The "POP" Animation
-        // Start pushed down off the screen (positive Y value)
+        // Animation
         imgGoggins.translationY = 1000f
-
-        // Animate up to 0 (original position)
         imgGoggins.animate()
             .translationY(0f)
             .setDuration(600)
-            .setStartDelay(200) // Wait a tiny bit after screen load
-            .setInterpolator(OvershootInterpolator(1.2f)) // Makes it bounce slightly
+            .setStartDelay(200)
+            .setInterpolator(OvershootInterpolator(1.2f))
             .withEndAction {
-                // After he pops up, show the speech bubble
-                tvScold.animate()
-                    .alpha(1f)
-                    .setDuration(300)
-                    .start()
+                tvScold.animate().alpha(1f).setDuration(300).start()
             }
             .start()
 
-        // 4. Button Logic
+        // Buttons
         btnGoHome.setOnClickListener {
-            // "Retreat" -> Go Home
             val home = Intent(Intent.ACTION_MAIN)
             home.addCategory(Intent.CATEGORY_HOME)
             home.flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -80,9 +71,9 @@ class BlockActivity : Activity() {
         }
 
         btnUnlock.setOnClickListener {
-            // "I'm Weak" -> Go to Pin Screen
             val i = Intent(this, PinActivity::class.java)
-            i.putExtra("action", "verify_and_remove")
+            // FIXED: Use specific action for temporary access
+            i.putExtra("action", "emergency_unlock")
             i.putExtra("blocked_package", blockedPackage)
             startActivity(i)
         }
@@ -93,7 +84,5 @@ class BlockActivity : Activity() {
         try { unregisterReceiver(closeReceiver) } catch (e: Exception) {}
     }
 
-    override fun onBackPressed() {
-        // Disable back button to force a choice
-    }
+    override fun onBackPressed() { }
 }
